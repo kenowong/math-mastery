@@ -11,6 +11,13 @@
   function save(s) { localStorage.setItem(KEY, JSON.stringify(s)); }
   let state = load(); // { [id]: { mastered:bool, weak:{ [qidx]:{fails,clear} } } }
   let pendingScrollTech = null; // 返回路径时，定位并高亮到此技巧节点
+  const STAGES = ["小学", "中学", "高中"];
+  const STAGE_DESC = {
+    "小学": "1–6 年级 · 数与代数、图形、奥数启蒙",
+    "中学": "7–9 年级 · 初中代数、几何、函数",
+    "高中": "10–12 年级 · 高中数学核心与专题"
+  };
+  let curFilter = { stage: null, grade: null }; // 当前侧边栏筛选（学段/年级）
 
   /* ---- 解锁规则（按年级动态计算，单一事实来源）----
    * 小学 1–6 年级、初中初一/初二（7、8 年级）：
@@ -79,57 +86,112 @@
 
   /* ---------------- 路由 ---------------- */
   function route() {
-    const h = location.hash.replace(/^#\/?/, "");
+    const h = decodeURIComponent(location.hash.replace(/^#\/?/, ""));
     const parts = h.split("/");
     document.querySelectorAll(".nav-link").forEach(a => a.classList.toggle("active", a.dataset.route === parts[0]));
+    view().className = "view";
     updateBadge();
-    if (parts[0] === "" || parts[0] === "path") return renderPath();
+    if (parts[0] === "" || parts[0] === "path") return renderPath(parts[1] || null, parts[2] || null);
     if (parts[0] === "learn") return renderLearn(parts[1]);
     if (parts[0] === "practice") return renderQuiz(parts[1], "practice");
     if (parts[0] === "gate") return renderQuiz(parts[1], "gate");
     if (parts[0] === "review") return renderReview();
     if (parts[0] === "progress") return renderProgress();
     if (parts[0] === "resources") return renderResources();
-    renderPath();
+    renderPath(null, null);
   }
   window.addEventListener("hashchange", route);
 
   // 返回学习路径，并定位/高亮到指定技巧节点（避免回到页面最顶部）
   function goPath(techId) {
     pendingScrollTech = techId || null;
-    if (location.hash.replace(/^#\/?/, "") === "path") renderPath();
-    else location.hash = "#/path";
+    const target = curFilter.stage ? "#/path/" + curFilter.stage + (curFilter.grade ? "/" + curFilter.grade : "") : "#/path";
+    if (location.hash.replace(/^#\/?/, "").indexOf("path") === 0) renderPath(curFilter.stage, curFilter.grade);
+    else location.hash = target;
   }
 
-  /* ---------------- 学习路径 ---------------- */
-  function renderPath() {
-    const v = view(); v.innerHTML = "";
-    const h = document.createElement("h2"); h.className = "section"; h.textContent = "学习路径"; v.appendChild(h);
+  /* ---------------- 学习路径（侧边栏 + 主区） ---------------- */
+  function renderPath(stage, grade) {
+    curFilter = { stage: stage || null, grade: grade || null };
+    const v = view(); v.className = "view path-view"; v.innerHTML = "";
+    const layout = document.createElement("div");
+    layout.className = "path-layout";
+    layout.innerHTML = buildSidebar() + '<div class="path-main" id="pathMain"></div><button class="sb-fab" id="sbFab">☰ 目录</button>';
+    v.appendChild(layout);
+    renderPathMain(layout.querySelector("#pathMain"));
+    bindSidebar(layout);
+  }
+
+  // 侧边栏：学段 → 年级 两级导航
+  function buildSidebar() {
+    let html = '<aside class="sidebar" id="sidebar">'
+      + '<div class="sb-head"><span class="sb-title">年级导航</span>'
+      + '<button class="sb-toggle" id="sbToggle" title="收起/展开">«</button></div>';
+    html += '<a class="sb-item' + (curFilter.stage ? "" : " active") + '" href="#/path"><span class="sb-ico">☰</span>全部方法</a>';
+    STAGES.forEach(stage => {
+      const grades = [...new Set(TECHNIQUES.filter(t => t.stage === stage).map(t => t.grade))]
+        .sort((a, b) => gradeNum(a) - gradeNum(b));
+      if (!grades.length) return;
+      const open = !curFilter.stage || curFilter.stage === stage;
+      html += '<div class="sb-stage' + (open ? " open" : "") + '">';
+      html += '<div class="sb-stage-h" data-stage="' + esc(stage) + '"><span class="sb-caret">' + (open ? "▾" : "▸") + '</span>'
+        + esc(stage) + '<span class="sb-cnt">' + grades.length + '</span></div>';
+      html += '<div class="sb-grades">';
+      html += '<a class="sb-grade' + (curFilter.stage === stage && !curFilter.grade ? " active" : "") + '" href="#/path/' + enc(stage) + '">全部' + esc(stage) + '</a>';
+      grades.forEach(g => {
+        const cnt = TECHNIQUES.filter(t => t.stage === stage && t.grade === g).length;
+        const act = curFilter.stage === stage && curFilter.grade === g ? " active" : "";
+        html += '<a class="sb-grade' + act + '" href="#/path/' + enc(stage) + '/' + enc(g) + '">' + esc(g)
+          + '<span class="sb-cnt">' + cnt + '</span></a>';
+      });
+      html += '</div></div>';
+    });
+    html += '</aside>';
+    return html;
+  }
+  function enc(s) { return encodeURIComponent(s); }
+
+  function bindSidebar(layout) {
+    const toggle = layout.querySelector("#sbToggle");
+    if (toggle) toggle.addEventListener("click", () => layout.classList.toggle("sb-collapsed"));
+    const fab = layout.querySelector("#sbFab");
+    if (fab) fab.addEventListener("click", () => layout.classList.toggle("sb-drawer-open"));
+    layout.querySelectorAll(".sb-stage-h").forEach(h => {
+      h.addEventListener("click", () => {
+        h.parentElement.classList.toggle("open");
+        const caret = h.querySelector(".sb-caret");
+        if (caret) caret.textContent = h.parentElement.classList.contains("open") ? "▾" : "▸";
+      });
+    });
+    layout.querySelectorAll(".sb-grade, .sb-item").forEach(a => {
+      a.addEventListener("click", () => { if (window.innerWidth <= 820) layout.classList.remove("sb-drawer-open"); });
+    });
+  }
+
+  // 主区域：按当前筛选渲染学段横幅 + 年级分隔 + 方法节点
+  function renderPathMain(main) {
+    const h = document.createElement("h2"); h.className = "section"; h.textContent = "学习路径"; main.appendChild(h);
     const hint = document.createElement("div"); hint.className = "hint";
     hint.textContent = "按 小学 → 中学 → 高中 排列，细分到年级。小学各年级、初一·初二年级：年级内顺序解锁——第一个技巧是入口，掌握后才会解锁本年级下一个。初三及高中：所有技巧均可直接进入。练习做错的题进入「薄弱点」，复习通关才算掌握。";
-    v.appendChild(hint);
+    main.appendChild(hint);
 
-    const STAGES = ["小学", "中学", "高中"];
-    const STAGE_DESC = {
-      "小学": "1–6 年级 · 数与代数、图形、奥数启蒙",
-      "中学": "7–9 年级 · 初中代数、几何、函数",
-      "高中": "10–12 年级 · 高中数学核心与专题"
-    };
     const groups = {};
     TECHNIQUES.forEach(t => { const k = t.stage + "|" + t.grade; (groups[k] = groups[k] || []).push(t); });
 
     let stepNo = 0;
     STAGES.forEach(stage => {
+      if (curFilter.stage && curFilter.stage !== stage) return;
       const grades = [...new Set(TECHNIQUES.filter(t => t.stage === stage).map(t => t.grade))]
         .sort((a, b) => gradeNum(a) - gradeNum(b));
       if (!grades.length) return;
       const sb = document.createElement("div"); sb.className = "stage-banner";
       sb.innerHTML = `<span class="stage-name">${stage}</span><span class="stage-desc">${STAGE_DESC[stage]}</span>`;
-      v.appendChild(sb);
+      main.appendChild(sb);
       grades.forEach(g => {
+        if (curFilter.grade && curFilter.grade !== g) return;
         const sub = document.createElement("div"); sub.className = "grade-sep";
         sub.innerHTML = `<span class="grade-tag">${g}</span><span class="grade-count">${groups[stage + "|" + g].length} 个技巧</span>`;
-        v.appendChild(sub);
+        main.appendChild(sub);
         sortGroup(groups[stage + "|" + g]).forEach(t => {
           stepNo++;
           const st = tstate(t.id);
@@ -155,11 +217,10 @@
               ${status === "lock" ? `<div class="meta" style="color:var(--lock)">需先掌握：${esc(tech(t.prereq).name)}</div>` : ""}
             </div>`;
           node.id = "node-" + t.id;
-          v.appendChild(node);
+          main.appendChild(node);
         });
       });
     });
-    // 若从某技巧返回路径，自动定位并高亮该节点
     if (pendingScrollTech) {
       const el = document.getElementById("node-" + pendingScrollTech);
       if (el) { el.scrollIntoView({ block: "center" }); el.classList.add("flash"); setTimeout(() => el.classList.remove("flash"), 1800); }
@@ -430,7 +491,6 @@
 
     const h = document.createElement("h3"); h.textContent = "各技巧状态"; v.appendChild(h);
     const tree = document.createElement("div"); tree.className = "tree";
-    const STAGES = ["小学", "中学", "高中"];
     const groups = {};
     TECHNIQUES.forEach(t => { const k = t.stage + "|" + t.grade; (groups[k] = groups[k] || []).push(t); });
     STAGES.forEach(stage => {
