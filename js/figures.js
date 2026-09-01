@@ -1617,5 +1617,56 @@
     return S(W, H, s);
   };
 
+  /* ---------------- 极坐标网格 ---------------- */
+  Fig.polar_grid = function (p) {
+    p = p || {};
+    const W = 240, H = 240, cx = 120, cy = 120, R = 100;
+    let s = `<line x1="20" y1="${cy}" x2="220" y2="${cy}" stroke="${K.ink}" stroke-width="1.2"/>`;
+    s += `<line x1="${cx}" y1="20" x2="${cx}" y2="220" stroke="${K.ink}" stroke-width="1.2"/>`;
+    s += `<circle cx="${cx}" cy="${cy}" r="${R}" fill="none" stroke="${K.line}" stroke-width="1"/>`;
+    s += `<circle cx="${cx}" cy="${cy}" r="${R/2}" fill="none" stroke="${K.line}" stroke-width="1"/>`;
+    const th = Math.PI/6, rr = R*0.8;
+    const px = cx + rr*Math.cos(th), py = cy - rr*Math.sin(th);
+    s += `<line x1="${cx}" y1="${cy}" x2="${px.toFixed(1)}" y2="${py.toFixed(1)}" stroke="${K.pri}" stroke-width="2"/>`;
+    s += `<circle cx="${px.toFixed(1)}" cy="${py.toFixed(1)}" r="4" fill="${K.pri}"/>`;
+    s += `<text x="${(px+4).toFixed(1)}" y="${(py-4).toFixed(1)}" font-size="11" fill="${K.pri}" font-family="inherit">P(ρ,θ)</text>`;
+    s += `<path d="M ${(cx+30).toFixed(1)} ${cy} A 30 30 0 0 0 ${(cx+30*Math.cos(th)).toFixed(1)} ${(cy-30*Math.sin(th)).toFixed(1)}" fill="none" stroke="${K.warn}" stroke-width="1.5"/>`;
+    s += `<text x="${(cx+34).toFixed(1)}" y="${cy-10}" font-size="10" fill="${K.warn}" font-family="inherit">θ</text>`;
+    return S(W, H, s, 240);
+  };
+
+  /* ---------------- 参数曲线（椭圆） ---------------- */
+  Fig.param_curve = function (p) {
+    p = p || {};
+    const W = 240, H = 200, cx = 120, cy = 100;
+    let s = `<line x1="10" y1="${cy}" x2="230" y2="${cy}" stroke="${K.ink}" stroke-width="1.2"/>`;
+    s += `<line x1="${cx}" y1="10" x2="${cx}" y2="190" stroke="${K.ink}" stroke-width="1.2"/>`;
+    s += `<ellipse cx="${cx}" cy="${cy}" rx="90" ry="55" fill="none" stroke="${K.pri}" stroke-width="2"/>`;
+    s += `<circle cx="${cx+90}" cy="${cy}" r="3.5" fill="${K.warn}"/>`;
+    s += `<text x="${cx+30}" y="${cy-30}" font-size="11" fill="${K.pri}" font-family="inherit">x = a cosθ</text>`;
+    s += `<text x="${cx+30}" y="${cy+44}" font-size="11" fill="${K.pri}" font-family="inherit">y = b sinθ</text>`;
+    return S(W, H, s, 240);
+  };
+
+  /* ---------------- 向量法解立体几何（立方体） ---------------- */
+  Fig.vector_solid_adv = function (p) {
+    p = p || {};
+    const W = 240, H = 220;
+    const a = 40, b = 50, c = 150, d = 160, dx = 42, dy = -32;
+    const front = [[a,b],[c,b],[c,d],[a,d]];
+    const back = front.map(pt => [pt[0]+dx, pt[1]+dy]);
+    const poly = pts => `<polygon points="${pts.map(pt => pt[0]+","+pt[1]).join(" ")}" fill="${K.fill}" stroke="${K.ink}" stroke-width="1.2"/>`;
+    let s = poly(front) + poly(back);
+    for (let i = 0; i < 4; i++) {
+      s += `<line x1="${front[i][0]}" y1="${front[i][1]}" x2="${back[i][0]}" y2="${back[i][1]}" stroke="${K.ink}" stroke-width="1.2"/>`;
+    }
+    const x1 = a, y1 = d, x2 = back[2][0], y2 = back[2][1];
+    s += `<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" stroke="${K.pri}" stroke-width="2.5"/>`;
+    s += `<circle cx="${x1}" cy="${y1}" r="3.5" fill="${K.pri}"/>`;
+    s += `<circle cx="${x2}" cy="${y2}" r="3.5" fill="${K.warn}"/>`;
+    s += `<text x="${x2-22}" y="${y2-6}" font-size="11" fill="${K.pri}" font-family="inherit">向量</text>`;
+    return S(W, H, s, 240);
+  };
+
   window.Fig = Fig;
 })();
