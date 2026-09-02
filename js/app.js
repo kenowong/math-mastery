@@ -101,6 +101,10 @@
     renderPath(null, null);
   }
   window.addEventListener("hashchange", route);
+  // 已在「薄弱点复习」页内再点该导航：hash 不变不会触发路由，手动重渲染，便于清完后立即看空状态
+  document.querySelectorAll(".nav-link").forEach(a => a.addEventListener("click", () => {
+    if (a.dataset.route === "review" && location.hash.replace(/^#\/?/, "") === "review") renderReview();
+  }));
 
   // 返回学习路径，并定位/高亮到指定技巧节点（避免回到页面最顶部）
   function goPath(techId) {
@@ -485,6 +489,9 @@
     v.appendChild(tip);
 
     let done = 0, ok = 0;
+    const prog = document.createElement("div"); prog.className = "rev-prog";
+    prog.innerHTML = `已完成 <b id="revDone">0</b>/${items.length}　·　薄弱点剩余 <b id="revRemain">${items.length}</b>`;
+    v.appendChild(prog);
     const list = document.createElement("div"); v.appendChild(list);
     items.forEach((it, i) => {
       const q = it.q;
@@ -505,14 +512,29 @@
         if (chosen === ans) op.classList.add("correct"); else op.classList.add("wrong");
         const ex = document.createElement("div"); ex.className = "explain"; ex.innerHTML = "解析：" + esc(q.explain); card.appendChild(ex);
         const st = tstate(it.t.id);
-        if (chosen === ans) { st.weak[it.key].cleared = true; ok++; }
-        else { st.weak[it.key].cleared = false; }
+        if (chosen === ans) {
+          st.weak[it.key].cleared = true; ok++;
+          card.classList.add("cleared");
+          const note = document.createElement("div"); note.className = "rev-note ok"; note.textContent = "✅ 已做对，已从「薄弱点」移除"; card.appendChild(note);
+        } else {
+          st.weak[it.key].cleared = false;
+          const note = document.createElement("div"); note.className = "rev-note bad"; note.textContent = "❌ 还差一点，仍需巩固（仍在薄弱点）"; card.appendChild(note);
+        }
         save(state); updateBadge(); done++;
+        prog.querySelector("#revDone").textContent = done;
+        prog.querySelector("#revRemain").textContent = items.length - ok;
         if (done === items.length) {
           const b = document.createElement("div"); b.className = "card center";
-          b.innerHTML = `<div class="qres" style="color:var(--ok)">本轮复习 ${items.length} 题，清空 ${ok} 个薄弱点。</div>
-            <a class="btn ghost" href="#/review">刷新</a>`;
-          list.appendChild(b);
+          if (ok === items.length) {
+            b.innerHTML = `<div class="qres" style="color:var(--ok)">🎉 太棒了！本轮 ${items.length} 个薄弱点已全部清零。</div>`;
+            list.appendChild(b);
+            setTimeout(() => renderReview(), 1100); // 自动重渲染，展示空状态
+          } else {
+            b.innerHTML = `<div class="qres" style="color:var(--ok)">本轮 ${items.length} 题，清空 ${ok} 个薄弱点，还有 ${items.length - ok} 个待巩固。</div>
+              <button class="btn ghost" id="rvRefresh">刷新列表</button>`;
+            b.querySelector("#rvRefresh").addEventListener("click", () => renderReview());
+            list.appendChild(b);
+          }
         }
       }));
     });

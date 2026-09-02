@@ -113,6 +113,13 @@ h3{font-size:15px;margin:14px 0 6px}
 .qfig{background:#fbfdff;border:1px solid var(--line);border-radius:10px;padding:8px;margin:2px 0 12px;text-align:center}
 .qfig svg{margin:0 auto}
 .qres{font-weight:700;margin:6px 0}
+/* 薄弱点复习：进度与即时反馈 */
+.rev-prog{font-size:13px;color:var(--muted);margin:4px 0 10px}
+.rev-prog b{color:var(--ink);font-size:15px}
+.rev-note{margin-top:8px;font-size:13px;font-weight:700;padding:6px 10px;border-radius:8px}
+.rev-note.ok{background:#eafaf0;color:var(--ok)}
+.rev-note.bad{background:#fdeeee;color:var(--danger)}
+.q.cleared{border-color:#bfe9cd;background:#f6fdf8}
 
 /* 进度 */
 .stat-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:10px;margin-bottom:14px}
