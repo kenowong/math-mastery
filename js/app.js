@@ -433,11 +433,22 @@
 
         if (chosen === ans) {
           correct++;
-          if (it.gen) { st.weak[t.id] = { fails: 0, cleared: true }; }
-          else if (st.weak["" + it.qidx]) st.weak["" + it.qidx].cleared = true;
+          if (mode === "gate") {
+            // 通关测试（正式测验）：做对一次即清零该薄弱点
+            if (it.gen) st.weak[t.id] = { fails: 0, cleared: true, passes: 1 };
+            else if (st.weak["" + it.qidx]) { st.weak["" + it.qidx].cleared = true; st.weak["" + it.qidx].passes = 1; }
+          } else {
+            // 自由练习：需连对 2 次（跨「再练一组」累计）才消除；单次做对只记 1 次通过
+            if (it.gen) {
+              const w = st.weak[t.id] || { fails: 0, cleared: false, passes: 0 };
+              w.passes = (w.passes || 0) + 1; w.cleared = w.passes >= 2; w.fails = 0; st.weak[t.id] = w;
+            } else if (st.weak["" + it.qidx]) {
+              const w = st.weak["" + it.qidx]; w.passes = (w.passes || 0) + 1; w.cleared = w.passes >= 2; w.fails = 0;
+            }
+          }
         } else {
-          if (it.gen) { st.weak[t.id] = st.weak[t.id] || { fails: 0, cleared: false }; st.weak[t.id].fails++; st.weak[t.id].cleared = false; }
-          else { if (!st.weak["" + it.qidx]) st.weak["" + it.qidx] = { fails: 0, cleared: false }; st.weak["" + it.qidx].fails++; st.weak["" + it.qidx].cleared = false; }
+          if (it.gen) { const w = st.weak[t.id] || { fails: 0, cleared: false, passes: 0 }; w.fails++; w.cleared = false; w.passes = 0; st.weak[t.id] = w; }
+          else { const w = st.weak["" + it.qidx] || { fails: 0, cleared: false, passes: 0 }; w.fails++; w.cleared = false; w.passes = 0; st.weak["" + it.qidx] = w; }
         }
         save(state); updateBadge();
         answered++;
@@ -462,7 +473,12 @@
     }
   }
 
-  /* ---------------- 薄弱点复习 ---------------- */
+  /* ---------------- 薄弱点复习（连对 2 道同类题才消除） ---------------- */
+  function nextWeakQ(it) {
+    if (it.gen) return it.t.qgen(1)[0];          // 参数化方法：永远是新生成的同类题
+    const qs = it.t.questions, j = Math.floor(Math.random() * qs.length);
+    return qs[j];                                 // 静态方法：从本法所有题里抽一道同类题确认
+  }
   function renderReview() {
     const v = view(); v.innerHTML = "";
     const h = document.createElement("h2"); h.className = "section"; h.textContent = "薄弱点复习"; v.appendChild(h);
@@ -472,12 +488,9 @@
       const gen = typeof t.qgen === "function";
       Object.keys(st.weak).forEach(k => {
         if (st.weak[k].cleared) return;
-        if (gen) {
-          // 参数化方法：薄弱点指向“整个方法”，复习时重新生成一道随机题来攻克
-          items.push({ t, q: t.qgen(1)[0], gen: true, key: t.id });
-        } else {
-          items.push({ t, q: t.questions[+k], gen: false, key: "" + k });
-        }
+        items.push(gen
+          ? { t, gen: true, key: t.id, q: t.qgen(1)[0] }       // 整法为薄弱点
+          : { t, gen: false, key: "" + k, q: t.questions[+k] }); // 具体某题
       });
     });
     if (!items.length) {
@@ -485,58 +498,63 @@
       return;
     }
     const tip = document.createElement("div"); tip.className = "hint";
-    tip.textContent = `共 ${items.length} 个薄弱点。在这里把它们做对，就能从「薄弱点」中清除；相关技巧的通关测试也会优先考这些。`;
+    tip.textContent = `共 ${items.length} 个薄弱点。每个需「连对 2 道同类题」才消除：做对 1 道会再出 1 道同类题确认，做错则回到起点重新计。`;
     v.appendChild(tip);
 
-    let done = 0, ok = 0;
+    let clearedCount = 0; const total = items.length;
     const prog = document.createElement("div"); prog.className = "rev-prog";
-    prog.innerHTML = `已完成 <b id="revDone">0</b>/${items.length}　·　薄弱点剩余 <b id="revRemain">${items.length}</b>`;
     v.appendChild(prog);
     const list = document.createElement("div"); v.appendChild(list);
-    items.forEach((it, i) => {
-      const q = it.q;
-      const judge = isJudge(q);
+    function refreshProg() { prog.innerHTML = `已消除 <b>${clearedCount}</b>/${total}　·　待巩固 <b>${total - clearedCount}</b>`; }
+    refreshProg();
+
+    function paintCard(card, it, passes) {
+      card.dataset.done = "0";
+      const q = it.q, judge = isJudge(q);
       const disp = judge ? { opts: q.opts, ans: q.ans } : shuffleOptions(q);
-      const card = document.createElement("div"); card.className = "q"; card.dataset.done = "0";
       const fig = renderFigOf(q);
-      card.innerHTML = `<div class="qtext">${esc(it.t.name)} ｜ ${i + 1}. ${esc(q.q)}</div>
-        ${fig}
+      card.innerHTML = `<div class="qtext">${esc(it.t.name)} ｜ ${esc(q.q)}</div>${fig}
         <div class="opts${judge ? " judge" : ""}">${disp.opts.map((o, j) => `<div class="opt${judge ? " judge" : ""}" data-i="${j}"><span class="mark${judge ? " judge" : ""}">${judge ? judgeMark(o) : String.fromCharCode(65 + j)}</span><span>${esc(o)}</span></div>`).join("")}</div>`;
-      list.appendChild(card);
       const opts = card.querySelectorAll(".opt");
       opts.forEach(op => op.addEventListener("click", () => {
         if (card.dataset.done === "1") return; card.dataset.done = "1";
-        const chosen = +op.dataset.i;
-        const ans = disp.ans;
+        const chosen = +op.dataset.i, ans = disp.ans;
         opts.forEach((o, j) => { o.style.pointerEvents = "none"; if (j === ans) o.classList.add("correct"); });
         if (chosen === ans) op.classList.add("correct"); else op.classList.add("wrong");
         const ex = document.createElement("div"); ex.className = "explain"; ex.innerHTML = "解析：" + esc(q.explain); card.appendChild(ex);
-        const st = tstate(it.t.id);
+        const w = tstate(it.t.id).weak[it.key] || (tstate(it.t.id).weak[it.key] = { fails: 0, cleared: false, passes: 0 });
         if (chosen === ans) {
-          st.weak[it.key].cleared = true; ok++;
-          card.classList.add("cleared");
-          const note = document.createElement("div"); note.className = "rev-note ok"; note.textContent = "✅ 已做对，已从「薄弱点」移除"; card.appendChild(note);
-        } else {
-          st.weak[it.key].cleared = false;
-          const note = document.createElement("div"); note.className = "rev-note bad"; note.textContent = "❌ 还差一点，仍需巩固（仍在薄弱点）"; card.appendChild(note);
-        }
-        save(state); updateBadge(); done++;
-        prog.querySelector("#revDone").textContent = done;
-        prog.querySelector("#revRemain").textContent = items.length - ok;
-        if (done === items.length) {
-          const b = document.createElement("div"); b.className = "card center";
-          if (ok === items.length) {
-            b.innerHTML = `<div class="qres" style="color:var(--ok)">🎉 太棒了！本轮 ${items.length} 个薄弱点已全部清零。</div>`;
-            list.appendChild(b);
-            setTimeout(() => renderReview(), 1100); // 自动重渲染，展示空状态
+          passes++; w.passes = passes; w.fails = 0;
+          if (passes >= 2) {
+            w.cleared = true; clearedCount++; save(state); updateBadge(); refreshProg();
+            card.classList.add("cleared");
+            const note = document.createElement("div"); note.className = "rev-note ok"; note.textContent = "✅ 连对 2 道，已永久消除"; card.appendChild(note);
+            if (clearedCount === total) {
+              const b = document.createElement("div"); b.className = "card center";
+              b.innerHTML = `<div class="qres" style="color:var(--ok)">🎉 全部 ${total} 个薄弱点已清零！</div>`;
+              list.appendChild(b);
+              setTimeout(() => renderReview(), 1100); // 自动重渲染，展示空状态
+            }
           } else {
-            b.innerHTML = `<div class="qres" style="color:var(--ok)">本轮 ${items.length} 题，清空 ${ok} 个薄弱点，还有 ${items.length - ok} 个待巩固。</div>
-              <button class="btn ghost" id="rvRefresh">刷新列表</button>`;
-            b.querySelector("#rvRefresh").addEventListener("click", () => renderReview());
-            list.appendChild(b);
+            w.cleared = false; save(state); updateBadge();
+            const note = document.createElement("div"); note.className = "rev-note ok"; note.textContent = "✅ 第 1 道做对，再来 1 道同类题确认"; card.appendChild(note);
+            it.q = nextWeakQ(it);
+            setTimeout(() => paintCard(card, it, passes), 650);
           }
+        } else {
+          passes = 0; w.passes = 0; w.cleared = false; w.fails = (w.fails || 0) + 1; save(state); updateBadge();
+          const note = document.createElement("div"); note.className = "rev-note bad"; note.textContent = "❌ 做错了，回到起点，需连对 2 道才能消除"; card.appendChild(note);
+          it.q = nextWeakQ(it);
+          setTimeout(() => paintCard(card, it, passes), 650);
         }
       }));
+    }
+
+    items.forEach(it => {
+      const card = document.createElement("div"); card.className = "q"; card.dataset.done = "0";
+      list.appendChild(card);
+      const w = tstate(it.t.id).weak[it.key];
+      paintCard(card, it, (w && w.passes) || 0);
     });
   }
 
