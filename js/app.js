@@ -282,6 +282,51 @@
     return (t === "对" || t === "正确" || t === "✓" || t === "✔") ? "✓" : "✗";
   }
 
+  /* ---------------- 跨组去重出题引擎 ----------------
+   * 目标：同一方法「再练一组」时，新组与最近 10 组已做过的题不重复；
+   *       单组内也不重复。题库足够大时即可做到 10 组(80 题)内互不重复。
+   */
+  const roundHistory = {}; // { techId: [ Set(本轮指纹), ... 最多保留 10 组 ] }
+  function quizFP(q) {
+    const ans = q.opts ? String(q.opts[q.ans]) : "";
+    return (q.q || "").replace(/\s+/g, "") + " " + ans;
+  }
+  function genRound(t, count) {
+    const arr = roundHistory[t.id] || [];
+    const hist = new Set();
+    arr.slice(-9).forEach(s => s.forEach(f => hist.add(f))); // 最近 9 组，保证 10 组内不重
+    const used = new Set();
+    const out = [];
+    let tries = 0;
+    while (out.length < count && tries < 80) {
+      tries++;
+      const b = t.qgen(count);
+      for (const c of b) {
+        const f = quizFP(c);
+        if (hist.has(f) || used.has(f)) continue;
+        used.add(f); out.push(c);
+        if (out.length >= count) break;
+      }
+    }
+    // 题库不足时（如某些基础法题型极少），仅保证本轮内不重复，避免卡死
+    let t2 = 0;
+    while (out.length < count && t2 < 80) {
+      t2++;
+      const b = t.qgen(count);
+      for (const c of b) {
+        const f = quizFP(c);
+        if (used.has(f)) continue;
+        used.add(f); out.push(c);
+        if (out.length >= count) break;
+      }
+    }
+    while (out.length < count) { const b = t.qgen(count); out.push(b[out.length % b.length]); }
+    arr.push(used);
+    if (arr.length > 10) arr.shift();
+    roundHistory[t.id] = arr;
+    return out.slice(0, count);
+  }
+
   function renderQuiz(id, mode) {
     const v = view(); v.innerHTML = "";
     const t = tech(id); if (!t) return renderPath();
@@ -291,8 +336,8 @@
     const genMode = typeof t.qgen === "function";
     let items; // {q, qidx, gen}
     if (genMode) {
-      // 参数化出题：每次生成全新随机题，真正不重样（第一遍/第二遍/第三遍都不同）
-      items = t.qgen(8).map((q, idx) => ({ q, qidx: idx, gen: true }));
+      // 参数化出题 + 跨组去重：再练一组会与最近 10 组已做过的题去重，做到 10 组内不重复
+      items = genRound(t, 8).map((q, idx) => ({ q, qidx: idx, gen: true }));
     } else {
       let pool;
       if (mode === "gate") {
