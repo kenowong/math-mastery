@@ -179,3 +179,20 @@ h3{font-size:15px;margin:14px 0 6px}
   .path-layout.sb-drawer-open .sidebar{transform:translateX(0);box-shadow:0 0 0 100vmax rgba(0,0,0,.35)}
   .sb-fab{display:inline-flex;align-items:center;gap:6px;position:fixed;left:10px;bottom:14px;z-index:41;background:var(--primary);color:#fff;border:none;border-radius:22px;padding:9px 14px;font-size:13px;font-weight:600;cursor:pointer;box-shadow:var(--shadow)}
 }
+
+/* ===== 去学习 · 典型例题 ===== */
+.ex-list{display:flex;flex-direction:column;gap:14px;margin-top:6px}
+.ex{border:1px solid var(--line);border-radius:12px;padding:12px 14px;background:var(--panel)}
+.ex-q{font-size:15px;font-weight:600;color:var(--ink);line-height:1.5;margin-bottom:8px;display:flex;align-items:flex-start;gap:8px}
+.ex-no{flex:0 0 auto;min-width:26px;height:26px;line-height:26px;text-align:center;background:#eef3ff;color:var(--primary);border-radius:7px;font-size:13px;font-weight:700}
+.ex-opts{display:flex;flex-wrap:wrap;gap:8px}
+.ex-opt{display:inline-flex;align-items:center;padding:6px 12px;border:1px solid var(--line);border-radius:9px;background:#f8fafc;font-size:14px;color:var(--ink)}
+.ex-opt.correct{border-color:var(--ok);background:#eafaf0;color:#15803d;font-weight:700}
+.ex-why{margin-top:10px;border-top:1px dashed var(--line);padding-top:8px}
+.ex-why summary{cursor:pointer;color:var(--primary);font-size:13px;font-weight:600;user-select:none;list-style:none;outline:none}
+.ex-why summary::-webkit-details-marker{display:none}
+.ex-why summary::before{content:"▸ ";color:var(--primary)}
+.ex-why[open] summary::before{content:"▾ "}
+.ex-exp{margin-top:8px;font-size:14px;color:var(--ink);line-height:1.6;background:#f8fafc;border-radius:8px;padding:8px 10px}
+.ex-point{margin-top:6px;font-size:13px;color:var(--warn)}
+.hint-inline{font-size:12px;color:var(--muted);font-weight:400}

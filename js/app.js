@@ -236,12 +236,25 @@
     const st = tstate(id);
 
     const card = document.createElement("div"); card.className = "card";
+    const exHtml = (t.questions || []).map((q, qi) => `
+      <div class="ex">
+        <div class="ex-q"><span class="ex-no">例${qi + 1}</span><span>${esc(q.q)}</span></div>
+        <div class="ex-opts">
+          ${q.opts.map((o, oi) => `<span class="ex-opt${oi === q.ans ? " correct" : ""}">${oi === q.ans ? "✓ " : ""}${esc(o)}</span>`).join("")}
+        </div>
+        <details class="ex-why"><summary>看解析</summary>
+          <div class="ex-exp">${esc(q.explain)}</div>
+          <div class="ex-point">🎯 要点：${esc(q.point || "")}</div>
+        </details>
+      </div>`).join("");
     card.innerHTML = `
       <div class="tech-head"><h2 class="section" style="margin:0">${esc(t.name)}</h2><span class="tag">${esc(t.grade)}</span></div>
       <div class="muted">${esc(t.summary)}</div>
       <div class="kou"><b>名师口诀：</b>${esc(t.kou)}</div>
       <h3>解题步骤</h3>
-      <ol class="steps">${t.steps.map(s => `<li>${s}</li>`).join("")}</ol>`;
+      <ol class="steps">${t.steps.map(s => `<li>${s}</li>`).join("")}</ol>
+      <h3>典型例题 <span class="hint-inline">（先读题想一想，再点开解析对照）</span></h3>
+      <div class="ex-list">${exHtml || '<div class="muted">该方法暂未配置例题。</div>'}</div>`;
     v.appendChild(card);
 
     if (t.anim && window.Anim && window.Anim[t.anim]) {
