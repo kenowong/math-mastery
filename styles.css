@@ -215,3 +215,33 @@ h3{font-size:15px;margin:14px 0 6px}
 .ex-exp{margin-top:8px;font-size:14px;color:var(--ink);line-height:1.6;background:#f8fafc;border-radius:8px;padding:8px 10px}
 .ex-point{margin-top:6px;font-size:13px;color:var(--warn)}
 .hint-inline{font-size:12px;color:var(--muted);font-weight:400}
+
+/* ===== AI 知识漏洞诊断 ===== */
+.diag-head .diag-top{display:flex;gap:16px;align-items:center;flex-wrap:wrap}
+.diag-mastery{flex:0 0 auto;text-align:center;background:linear-gradient(135deg,#eef3ff,#e6edff);border-radius:14px;padding:10px 16px}
+.diag-mastery .n{font-size:30px;font-weight:800;color:var(--primary);line-height:1.1}
+.diag-mastery .l{font-size:12px;color:var(--muted)}
+.diag-stats{flex:1 1 auto;display:grid;grid-template-columns:repeat(2,1fr);gap:6px 14px;font-size:13px;color:var(--ink)}
+.diag-stats b{color:var(--primary);font-size:16px;margin-right:3px}
+.diag-head .bar{margin-top:12px;height:9px}
+.stage-row{display:flex;align-items:center;gap:10px;margin:8px 0}
+.stage-row .stage-name{flex:0 0 52px;font-weight:700;font-size:13px;color:var(--ink)}
+.stage-row .bar.mini{flex:1 1 auto;height:8px;margin:0}
+.stage-row .bar.mini i.warn{background:var(--warn)}
+.stage-row .stage-num{flex:0 0 auto;font-size:12px;color:var(--muted)}
+.diag-concl{background:linear-gradient(135deg,#fffaf0,#fff7e6);border-color:#ffe1a8}
+.diag-concl h3{margin-top:0}
+.diag-concl .muted{line-height:1.7;font-size:14px}
+.diag-concl b{color:#b45309}
+.diag-list{display:flex;flex-direction:column;gap:8px;margin-top:4px}
+.diag-item{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:10px 12px;border:1px solid var(--line);border-radius:11px;background:var(--panel)}
+.diag-item .di-main{flex:1 1 auto;min-width:0}
+.diag-item .di-name{font-size:14px;font-weight:700;color:var(--ink)}
+.diag-item .di-meta{font-size:12px;color:var(--muted);margin-top:2px}
+.tag.ok{background:#eafaf0;color:#15803d;border-color:#b7ebc6}
+.tag.warn{background:#fff5e6;color:#b45309;border-color:#ffd79a}
+.tag.bad{background:#fdecec;color:#c0392b;border-color:#f5b5b0}
+@media (max-width:560px){
+  .diag-stats{grid-template-columns:repeat(2,1fr)}
+  .diag-mastery .n{font-size:26px}
+}

@@ -223,6 +223,36 @@ h3{font-size:15px;margin:14px 0 6px}
 .ex-point{margin-top:6px;font-size:13px;color:var(--warn)}
 .hint-inline{font-size:12px;color:var(--muted);font-weight:400}
 
+/* ===== AI 知识漏洞诊断 ===== */
+.diag-head .diag-top{display:flex;gap:16px;align-items:center;flex-wrap:wrap}
+.diag-mastery{flex:0 0 auto;text-align:center;background:linear-gradient(135deg,#eef3ff,#e6edff);border-radius:14px;padding:10px 16px}
+.diag-mastery .n{font-size:30px;font-weight:800;color:var(--primary);line-height:1.1}
+.diag-mastery .l{font-size:12px;color:var(--muted)}
+.diag-stats{flex:1 1 auto;display:grid;grid-template-columns:repeat(2,1fr);gap:6px 14px;font-size:13px;color:var(--ink)}
+.diag-stats b{color:var(--primary);font-size:16px;margin-right:3px}
+.diag-head .bar{margin-top:12px;height:9px}
+.stage-row{display:flex;align-items:center;gap:10px;margin:8px 0}
+.stage-row .stage-name{flex:0 0 52px;font-weight:700;font-size:13px;color:var(--ink)}
+.stage-row .bar.mini{flex:1 1 auto;height:8px;margin:0}
+.stage-row .bar.mini i.warn{background:var(--warn)}
+.stage-row .stage-num{flex:0 0 auto;font-size:12px;color:var(--muted)}
+.diag-concl{background:linear-gradient(135deg,#fffaf0,#fff7e6);border-color:#ffe1a8}
+.diag-concl h3{margin-top:0}
+.diag-concl .muted{line-height:1.7;font-size:14px}
+.diag-concl b{color:#b45309}
+.diag-list{display:flex;flex-direction:column;gap:8px;margin-top:4px}
+.diag-item{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:10px 12px;border:1px solid var(--line);border-radius:11px;background:var(--panel)}
+.diag-item .di-main{flex:1 1 auto;min-width:0}
+.diag-item .di-name{font-size:14px;font-weight:700;color:var(--ink)}
+.diag-item .di-meta{font-size:12px;color:var(--muted);margin-top:2px}
+.tag.ok{background:#eafaf0;color:#15803d;border-color:#b7ebc6}
+.tag.warn{background:#fff5e6;color:#b45309;border-color:#ffd79a}
+.tag.bad{background:#fdecec;color:#c0392b;border-color:#f5b5b0}
+@media (max-width:560px){
+  .diag-stats{grid-template-columns:repeat(2,1fr)}
+  .diag-mastery .n{font-size:26px}
+}
+
 </style>
 </head>
 <body>
@@ -238,6 +268,7 @@ h3{font-size:15px;margin:14px 0 6px}
       <a href="#/path" class="nav-link" data-route="path">学习路径</a>
       <a href="#/review" class="nav-link" data-route="review">薄弱点复习<span class="badge" id="weakBadge">0</span></a>
       <a href="#/progress" class="nav-link" data-route="progress">我的进度</a>
+      <a href="#/ai" class="nav-link" data-route="ai">AI诊断</a>
       <a href="#/resources" class="nav-link" data-route="resources">相关项目</a>
     </nav>
   </header>
@@ -13567,6 +13598,7 @@ window.Anim = (function () {
     if (parts[0] === "gate") return renderQuiz(parts[1], "gate");
     if (parts[0] === "review") return renderReview();
     if (parts[0] === "progress") return renderProgress();
+    if (parts[0] === "ai") return renderDiagnose();
     if (parts[0] === "resources") return renderResources();
     renderPath(null, null);
   }
@@ -13824,47 +13856,54 @@ window.Anim = (function () {
     return out.slice(0, count);
   }
 
-  function renderQuiz(id, mode) {
+  function renderQuiz(id, mode, planItems) {
     const v = view(); v.innerHTML = "";
-    const t = tech(id); if (!t) return renderPath();
-    if (!unlocked(id)) { toast("先融会贯通上一技巧才能解锁"); location.hash = "#/path"; return; }
-    const st = tstate(id);
+    const isPlan = !!planItems;
+    let t = id ? tech(id) : null;
+    if (!isPlan && !t) return renderPath();
+    if (!isPlan && !unlocked(id)) { toast("先融会贯通上一技巧才能解锁"); location.hash = "#/path"; return; }
+    const st = isPlan ? null : tstate(id);
 
-    const genMode = typeof t.qgen === "function";
-    let items; // {q, qidx, gen}
-    if (genMode) {
-      // 参数化出题 + 跨组去重：再练一组会与最近 10 组已做过的题去重，做到 10 组内不重复
-      items = genRound(t, 8).map((q, idx) => ({ q, qidx: idx, gen: true }));
+    let items; // {q, qidx, gen, t, key}
+    if (isPlan) {
+      items = planItems;
     } else {
-      let pool;
-      if (mode === "gate") {
-        const weakIdx = Object.keys(st.weak).filter(k => !st.weak[k].cleared).map(Number);
-        const rest = shuffle(t.questions.map((_, i) => i)).filter(i => !weakIdx.includes(i));
-        pool = weakIdx.concat(rest).slice(0, Math.max(5, weakIdx.length));
+      const genMode = typeof t.qgen === "function";
+      if (genMode) {
+        // 参数化出题 + 跨组去重：再练一组会与最近 10 组已做过的题去重，做到 10 组内不重复
+        items = genRound(t, 8).map((q, idx) => ({ q, qidx: idx, gen: true, t, key: t.id }));
       } else {
-        // 自由练习：每次随机抽题（随机子集 + 随机顺序），避免每次都是同一批固定题
-        // 题少（≤6 道）时全部出示；题多时抽约 70%，且至少出 5 道，保证「每轮不少于 5 题」
-        const n = t.questions.length;
-        const k = n <= 6 ? n : Math.max(5, Math.ceil(n * 0.7));
-        pool = shuffle(t.questions.map((_, i) => i)).slice(0, k);
+        let pool;
+        if (mode === "gate") {
+          const weakIdx = Object.keys(st.weak).filter(k => !st.weak[k].cleared).map(Number);
+          const rest = shuffle(t.questions.map((_, i) => i)).filter(i => !weakIdx.includes(i));
+          pool = weakIdx.concat(rest).slice(0, Math.max(5, weakIdx.length));
+        } else {
+          const n = t.questions.length;
+          const k = n <= 6 ? n : Math.max(5, Math.ceil(n * 0.7));
+          pool = shuffle(t.questions.map((_, i) => i)).slice(0, k);
+        }
+        items = pool.map(i => ({ q: t.questions[i], qidx: i, gen: false, t, key: "" + i }));
       }
-      items = pool.map(i => ({ q: t.questions[i], qidx: i, gen: false }));
     }
     const total = items.length;
     let answered = 0, correct = 0;
 
+    const headTitle = isPlan ? "AI 专属训练套餐" : `${esc(t.name)} · ${mode === "gate" ? "通关测试" : "自由练习"}`;
+    const headSub = isPlan ? "根据知识漏洞分析，为你优先安排最需要巩固的题目（连对 2 道即消除）。"
+      : (mode === "gate" ? "通关测试会优先把你之前的薄弱点放进题里；全部答对并清零薄弱点，才算融会贯通、解锁下一技巧。" : "随手练，做错自动记入薄弱点，可去「薄弱点复习」集中攻克。");
     const head = document.createElement("div"); head.className = "card";
-    head.innerHTML = `<div class="tech-head"><h2 class="section" style="margin:0">${esc(t.name)} · ${mode === "gate" ? "通关测试" : "自由练习"}</h2>
-      <span class="tag">${mode === "gate" ? "需 ≥80% 且薄弱点清零" : "不限量"}</span></div>
-      <div class="muted">${mode === "gate" ? "通关测试会优先把你之前的薄弱点放进题里；全部答对并清零薄弱点，才算融会贯通、解锁下一技巧。" : "随手练，做错自动记入薄弱点，可去「薄弱点复习」集中攻克。"}</div>`;
+    head.innerHTML = `<div class="tech-head"><h2 class="section" style="margin:0">${headTitle}</h2>
+      <span class="tag">${isPlan ? "个性化" : (mode === "gate" ? "需 ≥80% 且薄弱点清零" : "不限量")}</span></div>
+      <div class="muted">${headSub}</div>`;
     v.appendChild(head);
 
     const list = document.createElement("div"); v.appendChild(list);
 
     function finish() {
-      const weakRemain = Object.keys(st.weak).filter(k => !st.weak[k].cleared).length;
+      const weakRemain = isPlan ? weakCount() : Object.keys(st.weak).filter(k => !st.weak[k].cleared).length;
       const banner = document.createElement("div"); banner.className = "card center";
-      if (mode === "gate") {
+      if (mode === "gate" && !isPlan) {
         const pass = correct >= Math.ceil(total * 0.8) && weakRemain === 0;
         if (pass) {
           st.mastered = true; save(state);
@@ -13882,8 +13921,8 @@ window.Anim = (function () {
         }
       } else {
         banner.innerHTML = `<div class="qres">本轮完成 ${total} 题，正确 ${correct} 题。</div>
-          <a class="btn ghost" id="backBtn2" href="#/path">返回路径</a>`;
-        banner.querySelector("#backBtn2").addEventListener("click", (e) => { e.preventDefault(); goPath(t.id); });
+          <a class="btn ghost" id="backBtn2" href="#/ai">返回诊断</a>`;
+        banner.querySelector("#backBtn2").addEventListener("click", (e) => { e.preventDefault(); location.hash = "#/ai"; });
       }
       list.appendChild(banner);
       updateBadge();
@@ -13911,24 +13950,25 @@ window.Anim = (function () {
         if (chosen === ans) op.classList.add("correct"); else op.classList.add("wrong");
         const ex = document.createElement("div"); ex.className = "explain"; ex.innerHTML = "解析：" + esc(q.explain); card.appendChild(ex);
 
+        const itT = it.t, itSt = tstate(itT.id), itKey = it.gen ? itT.id : it.key;
         if (chosen === ans) {
           correct++;
-          if (mode === "gate") {
+          if (mode === "gate" && !isPlan) {
             // 通关测试（正式测验）：做对一次即清零该薄弱点
-            if (it.gen) st.weak[t.id] = { fails: 0, cleared: true, passes: 1 };
-            else if (st.weak["" + it.qidx]) { st.weak["" + it.qidx].cleared = true; st.weak["" + it.qidx].passes = 1; }
+            if (it.gen) itSt.weak[itT.id] = { fails: 0, cleared: true, passes: 1, lastTime: Date.now(), attempts: 1 };
+            else if (itSt.weak[itKey]) { itSt.weak[itKey].cleared = true; itSt.weak[itKey].passes = 1; itSt.weak[itKey].lastTime = Date.now(); itSt.weak[itKey].attempts = (itSt.weak[itKey].attempts || 0) + 1; }
           } else {
-            // 自由练习：需连对 2 次（跨「再练一组」累计）才消除；单次做对只记 1 次通过
+            // 自由练习 / 套餐：需连对 2 次（跨「再练一组」累计）才消除；单次做对只记 1 次通过
             if (it.gen) {
-              const w = st.weak[t.id] || { fails: 0, cleared: false, passes: 0 };
-              w.passes = (w.passes || 0) + 1; w.cleared = w.passes >= 2; w.fails = 0; st.weak[t.id] = w;
-            } else if (st.weak["" + it.qidx]) {
-              const w = st.weak["" + it.qidx]; w.passes = (w.passes || 0) + 1; w.cleared = w.passes >= 2; w.fails = 0;
+              const w = itSt.weak[itT.id] || { fails: 0, cleared: false, passes: 0, attempts: 0 };
+              w.passes = (w.passes || 0) + 1; w.cleared = w.passes >= 2; w.fails = 0; w.lastTime = Date.now(); w.attempts = (w.attempts || 0) + 1; itSt.weak[itT.id] = w;
+            } else if (itSt.weak[itKey]) {
+              const w = itSt.weak[itKey]; w.passes = (w.passes || 0) + 1; w.cleared = w.passes >= 2; w.fails = 0; w.lastTime = Date.now(); w.attempts = (w.attempts || 0) + 1;
             }
           }
         } else {
-          if (it.gen) { const w = st.weak[t.id] || { fails: 0, cleared: false, passes: 0 }; w.fails++; w.cleared = false; w.passes = 0; st.weak[t.id] = w; }
-          else { const w = st.weak["" + it.qidx] || { fails: 0, cleared: false, passes: 0 }; w.fails++; w.cleared = false; w.passes = 0; st.weak["" + it.qidx] = w; }
+          if (it.gen) { const w = itSt.weak[itT.id] || { fails: 0, cleared: false, passes: 0, attempts: 0 }; w.fails++; w.cleared = false; w.passes = 0; w.lastTime = Date.now(); w.attempts = (w.attempts || 0) + 1; itSt.weak[itT.id] = w; }
+          else { const w = itSt.weak[itKey] || { fails: 0, cleared: false, passes: 0, attempts: 0 }; w.fails++; w.cleared = false; w.passes = 0; w.lastTime = Date.now(); w.attempts = (w.attempts || 0) + 1; itSt.weak[itKey] = w; }
         }
         save(state); updateBadge();
         answered++;
@@ -13936,19 +13976,21 @@ window.Anim = (function () {
       }));
     });
 
-    if (mode === "practice") {
+    if (mode === "practice" || isPlan) {
       const again = document.createElement("div"); again.className = "row"; again.style.margin = "6px 0 16px";
-      again.innerHTML = `<a class="btn ghost" id="againBtn" href="#/practice/${t.id}">🔄 再练一组</a><a class="btn soft" id="backBtn" href="#/path">返回路径</a>`;
+      if (isPlan) {
+        again.innerHTML = `<a class="btn ghost" id="againBtn" href="#/ai">🔄 再做一组专属训练</a><a class="btn soft" id="backBtn" href="#/ai">返回诊断</a>`;
+      } else {
+        again.innerHTML = `<a class="btn ghost" id="againBtn" href="#/practice/${t.id}">🔄 再练一组</a><a class="btn soft" id="backBtn" href="#/path">返回路径</a>`;
+      }
       v.appendChild(again);
-      // 关键修复：当前页 hash 与按钮 href 相同，hashchange 不会触发，需手动强制重渲染
       again.querySelector("#againBtn").addEventListener("click", (e) => {
         e.preventDefault();
-        renderQuiz(t.id, "practice"); // 重新进入会重新随机抽题 / 重新生成，做到「再练一组」立即出新题
+        if (isPlan) startPlan(); else renderQuiz(t.id, "practice"); // 重新进入会重新随机抽题 / 重新生成，做到「再练一组」立即出新题
       });
-      // 返回路径时，定位到当前练习的技巧节点，而不是回到页面顶部
       again.querySelector("#backBtn").addEventListener("click", (e) => {
         e.preventDefault();
-        goPath(t.id);
+        if (isPlan) location.hash = "#/ai"; else goPath(t.id);
       });
     }
   }
@@ -14002,9 +14044,9 @@ window.Anim = (function () {
         opts.forEach((o, j) => { o.style.pointerEvents = "none"; if (j === ans) o.classList.add("correct"); });
         if (chosen === ans) op.classList.add("correct"); else op.classList.add("wrong");
         const ex = document.createElement("div"); ex.className = "explain"; ex.innerHTML = "解析：" + esc(q.explain); card.appendChild(ex);
-        const w = tstate(it.t.id).weak[it.key] || (tstate(it.t.id).weak[it.key] = { fails: 0, cleared: false, passes: 0 });
+        const w = tstate(it.t.id).weak[it.key] || (tstate(it.t.id).weak[it.key] = { fails: 0, cleared: false, passes: 0, lastTime: 0, attempts: 0 });
         if (chosen === ans) {
-          passes++; w.passes = passes; w.fails = 0;
+          passes++; w.passes = passes; w.fails = 0; w.lastTime = Date.now(); w.attempts = (w.attempts || 0) + 1;
           if (passes >= 2) {
             w.cleared = true; clearedCount++; save(state); updateBadge(); refreshProg();
             card.classList.add("cleared");
@@ -14016,13 +14058,13 @@ window.Anim = (function () {
               setTimeout(() => renderReview(), 1100); // 自动重渲染，展示空状态
             }
           } else {
-            w.cleared = false; save(state); updateBadge();
+            w.cleared = false; w.lastTime = Date.now(); w.attempts = (w.attempts || 0) + 1; save(state); updateBadge();
             const note = document.createElement("div"); note.className = "rev-note ok"; note.textContent = "✅ 第 1 道做对，再来 1 道同类题确认"; card.appendChild(note);
             it.q = nextWeakQ(it);
             setTimeout(() => paintCard(card, it, passes), 650);
           }
         } else {
-          passes = 0; w.passes = 0; w.cleared = false; w.fails = (w.fails || 0) + 1; save(state); updateBadge();
+          passes = 0; w.passes = 0; w.cleared = false; w.fails = (w.fails || 0) + 1; w.lastTime = Date.now(); w.attempts = (w.attempts || 0) + 1; save(state); updateBadge();
           const note = document.createElement("div"); note.className = "rev-note bad"; note.textContent = "❌ 做错了，回到起点，需连对 2 道才能消除"; card.appendChild(note);
           it.q = nextWeakQ(it);
           setTimeout(() => paintCard(card, it, passes), 650);
@@ -14039,6 +14081,161 @@ window.Anim = (function () {
   }
 
   /* ---------------- 进度 ---------------- */
+  /* ---------------- AI 知识漏洞诊断 + 个性化出题 ---------------- */
+  // 严重程度评分：错得越多、连对越少、越久没练 → 越该优先
+  function sevScore(w, now) {
+    const fails = w.fails || 0;
+    const passes = w.passes || 0;
+    const days = w.lastTime ? (now - w.lastTime) / 86400000 : 30;
+    let s = fails * 3 + (passes >= 1 ? 0 : 4) + Math.min(days, 30) * 0.15;
+    if (passes >= 2) s *= 0.4;
+    return Math.round(s * 10) / 10;
+  }
+  // 收集所有未清零薄弱点，附方法信息，按严重程度降序
+  function collectWeak(now) {
+    const out = [];
+    TECHNIQUES.forEach(t => {
+      const st = state[t.id]; if (!st) return;
+      Object.keys(st.weak).forEach(k => {
+        const w = st.weak[k];
+        if (w.cleared) return;
+        out.push({
+          t, key: k, w,
+          gen: !!t.qgen,
+          qidx: t.qgen ? -1 : (+k),
+          sev: sevScore(w, now),
+          grade: t.grade, stage: t.stage
+        });
+      });
+    });
+    out.sort((a, b) => b.sev - a.sev);
+    return out;
+  }
+  function analyzeWeakness() {
+    const now = Date.now();
+    const weak = collectWeak(now);
+    const total = TECHNIQUES.length;
+    const mastered = TECHNIQUES.filter(t => state[t.id] && state[t.id].mastered).length;
+    const byStage = {};
+    STAGES.forEach(s => byStage[s] = { total: 0, mastered: 0, weak: 0, learning: 0 });
+    TECHNIQUES.forEach(t => {
+      const st = state[t.id]; const b = byStage[t.stage];
+      b.total++;
+      if (st && st.mastered) b.mastered++;
+      else if (unlocked(t.id)) b.learning++;
+      if (st && Object.keys(st.weak).some(k => !st.weak[k].cleared)) b.weak++;
+    });
+    const byGrade = {};
+    weak.forEach(x => { byGrade[x.grade] = (byGrade[x.grade] || 0) + 1; });
+    const top = weak.slice(0, 5);
+    const stubborn = weak.filter(x => (x.w.fails || 0) >= 3 && (x.w.passes || 0) < 2);
+    const warming = weak.filter(x => (x.w.passes || 0) >= 1 && (x.w.passes || 0) < 2);
+    const days = d => d <= 0 ? "今天" : d < 1 ? "昨天" : d < 7 ? Math.floor(d) + " 天前" : d < 30 ? Math.floor(d / 7) + " 周前" : Math.floor(d / 30) + " 个月前";
+    return { now, weak, total, mastered, byStage, byGrade, top, stubborn, warming, days };
+  }
+  // 个性化排程：每个薄弱点按严重程度出 1~3 题
+  function genPlan() {
+    const r = analyzeWeakness();
+    const items = [];
+    r.weak.forEach(x => {
+      const cnt = x.sev >= 9 ? 3 : (x.sev >= 4 ? 2 : 1);
+      if (x.gen) {
+        for (let i = 0; i < cnt; i++) items.push({ t: x.t, q: x.t.qgen(1)[0], qidx: -1, gen: true, key: x.key });
+      } else {
+        const qs = x.t.questions, picks = shuffle(qs.map((_, i) => i)).slice(0, Math.min(cnt, qs.length));
+        picks.forEach(pi => items.push({ t: x.t, q: qs[pi], qidx: pi, gen: false, key: x.key }));
+      }
+    });
+    return { items, weakCount: r.weak.length, summary: r };
+  }
+  function startPlan() {
+    const r = genPlan();
+    if (!r.items.length) { toast("暂无可练的薄弱点，去练习里制造一些吧"); location.hash = "#/ai"; return; }
+    renderQuiz(null, "plan", r.items);
+  }
+  function buildConclusion(r) {
+    if (!r.weak.length) return "目前没有未清零的薄弱点，说明近期练习质量很好。建议每天保持 10~15 分钟练习，巩固已掌握内容、预防遗忘。";
+    const parts = [];
+    const stageRank = STAGES.map(s => ({ s, n: r.byStage[s].weak })).sort((a, b) => b.n - a.n).filter(x => x.n > 0);
+    if (stageRank.length) {
+      const top = stageRank[0];
+      parts.push(`孩子在<b>「${top.s}」</b>模块薄弱点最集中（共 ${top.n} 项），是当前重点突破方向。`);
+    }
+    if (r.stubborn.length) {
+      parts.push(`其中有 <b>${r.stubborn.length}</b> 个「顽固薄弱点」（连续错 3 次以上），建议优先安排专项训练，每天连做 2 道直到清零。`);
+    }
+    if (r.warming.length) {
+      parts.push(`另有 <b>${r.warming.length}</b> 个已做对 1 道、只差 1 道就能消除，趁热打铁很快能清零。`);
+    }
+    const hardest = r.top[0];
+    if (hardest) {
+      const when = hardest.w.lastTime ? (() => { const d = Math.floor((r.now - hardest.w.lastTime) / 86400000); return d <= 0 ? "今天" : d < 7 ? d + " 天前" : "较久之前"; })() : "尚未记录";
+      parts.push(`最严重的单点是「<b>${esc(hardest.t.name)}</b>」（${esc(hardest.grade)}），上次练习在 ${when}，已错 ${hardest.w.fails || 0} 次。`);
+    }
+    parts.push(`点击「开始专属训练套餐」，系统会按严重程度自动排程：严重项多练、轻微项少练，连对 2 道即消除。`);
+    return parts.join("");
+  }
+  function renderDiagnose() {
+    const v = view(); v.innerHTML = "";
+    const r = analyzeWeakness();
+    const h = document.createElement("h2"); h.className = "section"; h.textContent = "AI 知识漏洞诊断"; v.appendChild(h);
+
+    const pct = Math.round(r.mastered / r.total * 100);
+    const head = document.createElement("div"); head.className = "card diag-head";
+    head.innerHTML = `<div class="diag-top">
+        <div class="diag-mastery"><div class="n">${pct}%</div><div class="l">总体掌握度</div></div>
+        <div class="diag-stats">
+          <div><b>${r.mastered}</b> 已掌握</div>
+          <div><b>${r.weak.length}</b> 个薄弱点</div>
+          <div><b>${r.stubborn.length}</b> 个顽固</div>
+          <div><b>${r.warming.length}</b> 个将清零</div>
+        </div>
+      </div>
+      <div class="bar"><i style="width:${pct}%"></i></div>`;
+    v.appendChild(head);
+
+    const stageCard = document.createElement("div"); stageCard.className = "card";
+    stageCard.innerHTML = `<h3>各学段薄弱点分布</h3>` + STAGES.map(s => {
+      const b = r.byStage[s]; if (!b.total) return "";
+      const wpct = Math.round(b.weak / b.total * 100);
+      return `<div class="stage-row"><span class="stage-name">${s}</span>
+        <div class="bar mini"><i class="warn" style="width:${wpct}%"></i></div>
+        <span class="stage-num">薄弱 ${b.weak}/${b.total}</span></div>`;
+    }).join("");
+    v.appendChild(stageCard);
+
+    const cb = document.createElement("div"); cb.className = "card diag-concl";
+    cb.innerHTML = `<h3>🧠 诊断结论</h3><div class="muted">${buildConclusion(r)}</div>`;
+    v.appendChild(cb);
+
+    const acts = document.createElement("div"); acts.className = "row"; acts.style.margin = "4px 0 12px";
+    if (r.weak.length) {
+      acts.innerHTML = `<button class="btn" id="planBtn">🎯 开始专属训练套餐（${r.weak.length} 项）</button>
+        <a class="btn soft" href="#/review">去薄弱点复习</a>`;
+      acts.querySelector("#planBtn").addEventListener("click", () => startPlan());
+    } else {
+      acts.innerHTML = `<div class="qres" style="color:var(--ok)">🎉 当前没有未清零的薄弱点，保持得很好！</div>
+        <a class="btn soft" href="#/path">去练习巩固</a>`;
+    }
+    v.appendChild(acts);
+
+    if (r.weak.length) {
+      const hl = document.createElement("h3"); hl.textContent = "薄弱点清单（按严重程度排序）"; v.appendChild(hl);
+      const list = document.createElement("div"); list.className = "diag-list";
+      r.weak.forEach(x => {
+        const lvl = x.sev >= 9 ? ["顽固", "bad"] : (x.sev >= 4 ? ["待巩固", "warn"] : ["轻微", "ok"]);
+        const status = (x.w.passes || 0) >= 1 ? "连对 1 道 · 再来 1 道即消除" : ((x.w.fails || 0) >= 3 ? "连续错 " + x.w.fails + " 次" : "已错 " + (x.w.fails || 0) + " 次");
+        const whenTxt = x.w.lastTime ? r.days((r.now - x.w.lastTime) / 86400000) : "尚未记录";
+        const row = document.createElement("div"); row.className = "diag-item";
+        row.innerHTML = `<div class="di-main"><div class="di-name">${esc(x.t.name)}</div>
+          <div class="di-meta">${esc(x.grade)} · ${status} · 上次练习 ${whenTxt}</div></div>
+          <span class="tag ${lvl[1]}">${lvl[0]}</span>`;
+        list.appendChild(row);
+      });
+      v.appendChild(list);
+    }
+  }
+
   function renderProgress() {
     const v = view(); v.innerHTML = "";
     const total = TECHNIQUES.length;
