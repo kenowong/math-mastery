@@ -8,7 +8,7 @@
   const view = () => document.getElementById("view");
 
   function load() { try { return JSON.parse(localStorage.getItem(KEY)) || {}; } catch (e) { return {}; } }
-  function save(s) { localStorage.setItem(KEY, JSON.stringify(s)); }
+  function save(s) { try { localStorage.setItem(KEY, JSON.stringify(s)); } catch (e) {} }
   let state = load(); // { [id]: { mastered:bool, weak:{ [qidx]:{fails,clear} } } }
   let pendingScrollTech = null; // 返回路径时，定位并高亮到此技巧节点
   const STAGES = ["小学", "中学", "高中"];
