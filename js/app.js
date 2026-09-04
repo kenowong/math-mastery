@@ -120,8 +120,16 @@
     const v = view(); v.className = "view path-view"; v.innerHTML = "";
     const layout = document.createElement("div");
     layout.className = "path-layout";
-    layout.innerHTML = buildSidebar() + '<div class="path-main" id="pathMain"></div><button class="sb-fab" id="sbFab">☰ 目录</button>';
+    layout.innerHTML = buildSidebar()
+      + '<div class="sb-mask" id="sbMask"></div>'
+      + '<div class="path-main" id="pathMain"></div>'
+      + '<button class="sb-fab" id="sbFab">☰ 目录</button>';
     v.appendChild(layout);
+    const topBtn = document.createElement("button");
+    topBtn.className = "sb-top-btn"; topBtn.id = "sbTopBtn";
+    topBtn.textContent = "☰ 选择年级 / 学段";
+    topBtn.addEventListener("click", () => layout.classList.toggle("sb-drawer-open"));
+    layout.querySelector("#pathMain").insertBefore(topBtn, layout.querySelector("#pathMain").firstChild);
     renderPathMain(layout.querySelector("#pathMain"));
     bindSidebar(layout);
   }
@@ -160,6 +168,8 @@
     if (toggle) toggle.addEventListener("click", () => layout.classList.toggle("sb-collapsed"));
     const fab = layout.querySelector("#sbFab");
     if (fab) fab.addEventListener("click", () => layout.classList.toggle("sb-drawer-open"));
+    const mask = layout.querySelector("#sbMask");
+    if (mask) mask.addEventListener("click", () => layout.classList.remove("sb-drawer-open"));
     layout.querySelectorAll(".sb-stage-h").forEach(h => {
       h.addEventListener("click", () => {
         h.parentElement.classList.toggle("open");
