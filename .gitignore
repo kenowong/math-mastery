@@ -13,3 +13,12 @@ _*.js
 _check_*.js
 _validate*.js
 _t.js
+
+# 公众号/百家号发布物料（不入库，仅本地使用）
+wechat-article.html
+wechat-article-2026-09-09.html
+content-wechat.html
+baijiahao-article.html
+upload_draft.js
+token_cache.json
+assets/wechat-group-qrcode.jpg
