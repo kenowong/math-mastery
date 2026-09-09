@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+</head>
+<body>
+<p style="margin:16px 0;font-size:16px;line-height:1.8;color:#444;">各位家长朋友好，我是 keno王。</p>
+<p style="margin:16px 0;font-size:16px;line-height:1.8;color:#333;">最近把中小学数学方法学习工具 <strong style="color:#1677ff;">math-mastery</strong> 又扎扎实实补了一轮。这一版核心解决三件事：孩子练完题到底哪里还不会、手机能不能直接打开就用、窄屏小手机看着别扭。下面一项一项说。</p>
+
+<h2 style="margin:28px 0 12px;font-size:19px;font-weight:700;color:#1a1a1a;border-left:4px solid #1677ff;padding-left:10px;">一、AI 知识漏洞诊断（纯本地，不联网）</h2>
+<p style="margin:14px 0;font-size:16px;line-height:1.8;color:#333;">以前孩子做错一道题，工具会把它记进「薄弱点」。但薄弱点多了，先攻哪个、后攻哪个，全凭感觉。</p>
+<p style="margin:14px 0;font-size:16px;line-height:1.8;color:#333;">现在顶部导航多了「<strong style="color:#1677ff;">AI诊断</strong>」，点一下会自动：</p>
+<div style="margin:14px 0;font-size:16px;line-height:1.8;color:#333;">
+<div style="margin:8px 0;"><span style="color:#1677ff;font-weight:700;">•&nbsp;</span>扫描所有未清零的薄弱点，按做错次数、距上次练习时长、是否已连对一次，算一个综合严重度评分；</div>
+<div style="margin:8px 0;"><span style="color:#1677ff;font-weight:700;">•&nbsp;</span>画出小学/初中/高中各学段掌握度，以及薄弱点按年级分布；</div>
+<div style="margin:8px 0;"><span style="color:#1677ff;font-weight:700;">•&nbsp;</span>给出一句人话结论，比如「高中梯度是首要薄弱点，建议优先攻克」；</div>
+<div style="margin:8px 0;"><span style="color:#1677ff;font-weight:700;">•&nbsp;</span>点「开始专属训练套餐」，直接按严重度权重混出一份个性化练习题。</div>
+</div>
+<p style="margin:14px 0;font-size:16px;line-height:1.8;color:#333;">整个诊断引擎跑在浏览器本地，<strong style="color:#d4380d;">不联网、不传数据、零配置</strong>。孩子练了啥、错在哪，只存在本机，不会上传任何服务器。</p>
+
+<h2 style="margin:28px 0 12px;font-size:19px;font-weight:700;color:#1a1a1a;border-left:4px solid #1677ff;padding-left:10px;">二、手机直接打开就能用</h2>
+<p style="margin:14px 0;font-size:16px;line-height:1.8;color:#333;">有家长把手机里的整个文件夹直接拷给孩子，点开 index.html，结果只显示白底文字——因为手机文件预览把外部 CSS/JS 都拦了。</p>
+<p style="margin:14px 0;font-size:16px;line-height:1.8;color:#333;">现在新增了<strong style="color:#1677ff;">自包含单文件版</strong> math-mastery-standalone.html，把所有样式和脚本都内联进这一个文件。只需：</p>
+<div style="margin:14px 0;font-size:16px;line-height:1.8;color:#333;">
+<div style="margin:8px 0;"><span style="color:#1677ff;font-weight:700;">1.&nbsp;</span>从 Gitee 下载这一个文件；</div>
+<div style="margin:8px 0;"><span style="color:#1677ff;font-weight:700;">2.&nbsp;</span>拷进手机；</div>
+<div style="margin:8px 0;"><span style="color:#1677ff;font-weight:700;">3.&nbsp;</span>点开它。</div>
+</div>
+<p style="margin:14px 0;font-size:16px;line-height:1.8;color:#333;">不需要 NAS、不需要服务器、不需要其他文件。安卓 Chrome 里进度和薄弱点也能正常保存；iOS 微信「预览」模式因系统限制可能仍有限制，建议用 Safari 打开。</p>
+
+<h2 style="margin:28px 0 12px;font-size:19px;font-weight:700;color:#1a1a1a;border-left:4px solid #1677ff;padding-left:10px;">三、移动端显示修复</h2>
+<p style="margin:14px 0;font-size:16px;line-height:1.8;color:#333;">之前窄屏手机顶部导航会挤出横向滚动条，看着像页面坏了。现在：</p>
+<div style="margin:14px 0;font-size:16px;line-height:1.8;color:#333;">
+<div style="margin:8px 0;"><span style="color:#1677ff;font-weight:700;">•&nbsp;</span>顶部品牌名和导航在手机上自动换行，超窄屏还能横向滑；</div>
+<div style="margin:8px 0;"><span style="color:#1677ff;font-weight:700;">•&nbsp;</span>学习路径页多了明显的「☰ 选择年级 / 学段」按钮，目录入口不再藏；</div>
+<div style="margin:8px 0;"><span style="color:#1677ff;font-weight:700;">•&nbsp;</span>侧边栏抽屉改成真实遮罩，点空白处就能关闭。</div>
+</div>
+
+<h2 style="margin:28px 0 12px;font-size:19px;font-weight:700;color:#1a1a1a;border-left:4px solid #1677ff;padding-left:10px;">四、薄弱点「连对 2 次才消除」</h2>
+<p style="margin:14px 0;font-size:16px;line-height:1.8;color:#333;">以前做错一次进薄弱点，做对一次就清除——有些孩子只是「假性掌握」。现在改成：</p>
+<div style="margin:14px 0;font-size:16px;line-height:1.8;color:#333;">
+<div style="margin:8px 0;"><span style="color:#1677ff;font-weight:700;">•&nbsp;</span>做错 → 记入薄弱点，清零连对次数；</div>
+<div style="margin:8px 0;"><span style="color:#1677ff;font-weight:700;">•&nbsp;</span>做对 1 次 → 记 1 次通过，但不消除；</div>
+<div style="margin:8px 0;"><span style="color:#1677ff;font-weight:700;">•&nbsp;</span>同类题再对 1 次 → 才正式从薄弱点移除。</div>
+</div>
+<p style="margin:14px 0;font-size:16px;line-height:1.8;color:#333;">孩子必须连续两次真正掌握同一类题，系统才判定过关，复习页也会自动出第二道同类题来确认。</p>
+
+<h2 style="margin:28px 0 12px;font-size:19px;font-weight:700;color:#1a1a1a;border-left:4px solid #1677ff;padding-left:10px;">五、开源地址 &amp; 求 Star</h2>
+<p style="margin:14px 0;font-size:16px;line-height:1.8;color:#333;">项目是 MIT 协议开源的，代码完全公开，可自由部署到 NAS、服务器或本地电脑。在 GitHub 或 Gitee 搜索 <strong style="color:#1677ff;">math-mastery</strong>（作者 kenowong）即可找到。</p>
+<div style="margin:14px 0;font-size:16px;line-height:1.8;color:#333;">
+<div style="margin:8px 0;"><span style="color:#1677ff;font-weight:700;">GitHub：</span><span style="color:#1677ff;text-decoration:underline;">https://github.com/kenowong/math-mastery</span></div>
+<div style="margin:8px 0;"><span style="color:#1677ff;font-weight:700;">Gitee：</span><span style="color:#1677ff;text-decoration:underline;">https://gitee.com/kenowong/math-mastery</span></div>
+</div>
+<p style="margin:16px 0;font-size:16px;line-height:1.8;color:#333;background:#f0f7ff;border:1px solid #cfe2ff;border-radius:8px;padding:14px 16px;">如果觉得 math-mastery 对孩子有帮助，<strong style="color:#d4380d;">欢迎去 GitHub 或 Gitee 点一个 Star ⭐</strong>。这是开源作者持续更新的最大动力，也方便你以后在仓库里回看更新。点开上面任一个链接，右上角点 Star 即可，举手之劳，谢谢支持！</p>
+
+<p style="margin:24px 0 8px;font-size:15px;line-height:1.8;color:#888;">下一版会继续补充方法配图/动图和题库，让 49 个核心方法每个都「看得见、练得够、记得牢」。家里有中小学生的朋友，欢迎下载试用。</p>
+</body>
+</html>
